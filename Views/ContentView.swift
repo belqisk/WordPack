@@ -2,44 +2,75 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var wordManager = WordManager()
-    @State private var currentIndex = 0
     @State private var showingChinese = false
     @State private var showingAddWord = false
-    @State private var learningMode: LearningMode = .all
-    
-    enum LearningMode {
-        case all, notLearned, needReview
-    }
+    @State private var showingAnswer = false
     
     var body: some View {
         NavigationView {
             VStack {
                 if !wordManager.words.isEmpty {
-                    Text(wordManager.words[currentIndex].english)
-                        .font(.largeTitle)
+                    // 进度条
+                    ProgressView(value: wordManager.progress)
                         .padding()
-                        .onTapGesture {
-                            wordManager.speakWord(wordManager.words[currentIndex].english)
-                        }
                     
-                    if showingChinese {
-                        Text(wordManager.words[currentIndex].chinese)
-                            .font(.title)
-                            .foregroundColor(.gray)
+                    // 当前单词
+                    VStack(spacing: 20) {
+                        if wordManager.reviewMode != .hideEnglish {
+                            Text(wordManager.words[wordManager.currentIndex].english)
+                                .font(.largeTitle)
+                                .padding()
+                                .onTapGesture {
+                                    wordManager.speakWord(wordManager.words[wordManager.currentIndex].english)
+                                }
+                        }
+                        
+                        if showingAnswer || wordManager.reviewMode != .hideChinese {
+                            Text(wordManager.words[wordManager.currentIndex].chinese)
+                                .font(.title)
+                                .foregroundColor(.gray)
+                        }
                     }
                     
-                    HStack {
-                        Button("显示翻译") {
-                            showingChinese.toggle()
-                        }
-                        .padding()
-                        
-                        Button("下一个") {
-                            if !wordManager.words.isEmpty {
-                                wordManager.markWordAsReviewed()
-                                currentIndex = (currentIndex + 1) % wordManager.words.count
-                                showingChinese = false
+                    // 按钮组
+                    VStack {
+                        if !showingAnswer {
+                            Button("显示答案") {
+                                showingAnswer = true
                             }
+                            .padding()
+                        } else {
+                            HStack(spacing: 30) {
+                                Button(action: {
+                                    wordManager.markCurrentWordAsWrong()
+                                    nextWord()
+                                }) {
+                                    Image(systemName: "xmark.circle")
+                                        .font(.largeTitle)
+                                        .foregroundColor(.red)
+                                }
+                                
+                                Button(action: {
+                                    wordManager.markCurrentWordAsCorrect()
+                                    nextWord()
+                                }) {
+                                    Image(systemName: "checkmark.circle")
+                                        .font(.largeTitle)
+                                        .foregroundColor(.green)
+                                }
+                            }
+                            .padding()
+                        }
+                    }
+                    
+                    // 学习统计
+                    if let word = wordManager.words[safe: wordManager.currentIndex] {
+                        HStack {
+                            Label("\(word.correctCount)", systemImage: "checkmark.circle")
+                                .foregroundColor(.green)
+                            Spacer()
+                            Label("\(word.wrongCount)", systemImage: "xmark.circle")
+                                .foregroundColor(.red)
                         }
                         .padding()
                     }
@@ -79,17 +110,15 @@ struct ContentView: View {
         }
     }
     
-    var filteredWords: [Word] {
-        switch learningMode {
-        case .all:
-            return wordManager.words
-        case .notLearned:
-            return wordManager.words.filter { !$0.learned }
-        case .needReview:
-            return wordManager.words.filter { word in
-                guard let lastReview = word.lastReviewDate else { return true }
-                return Date().timeIntervalSince(lastReview) > 24 * 60 * 60 // 24小时
-            }
-        }
+    private func nextWord() {
+        wordManager.currentIndex = (wordManager.currentIndex + 1) % wordManager.words.count
+        showingAnswer = false
+    }
+}
+
+// 安全数组访问扩展
+extension Array {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

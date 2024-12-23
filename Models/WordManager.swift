@@ -6,6 +6,18 @@ class WordManager: ObservableObject {
     @Published var words: [Word] = []
     private let wordsKey = "savedWords"
     
+    @Published var currentIndex = 0
+    @Published var reviewMode: ReviewMode = .showBoth
+    
+    enum ReviewMode {
+        case showBoth, hideEnglish, hideChinese
+    }
+    
+    var progress: Double {
+        guard !words.isEmpty else { return 0 }
+        return Double(words.filter { $0.learned }.count) / Double(words.count)
+    }
+    
     init() {
         loadWords()
         requestNotificationPermission()
@@ -86,5 +98,21 @@ class WordManager: ObservableObject {
                 addWord(word)
             }
         }
+    }
+    
+    func markCurrentWordAsCorrect() {
+        guard !words.isEmpty else { return }
+        var word = words[currentIndex]
+        word.markAsCorrect()
+        words[currentIndex] = word
+        saveWords()
+    }
+    
+    func markCurrentWordAsWrong() {
+        guard !words.isEmpty else { return }
+        var word = words[currentIndex]
+        word.markAsWrong()
+        words[currentIndex] = word
+        saveWords()
     }
 } 

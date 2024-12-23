@@ -7,6 +7,8 @@ struct Word: Codable, Identifiable {
     var learned: Bool
     var reviewCount: Int
     var lastReviewDate: Date?
+    var correctCount: Int = 0
+    var wrongCount: Int = 0
     
     init(english: String, chinese: String) {
         self.id = UUID()
@@ -15,13 +17,22 @@ struct Word: Codable, Identifiable {
         self.learned = false
         self.reviewCount = 0
         self.lastReviewDate = nil
+        self.correctCount = 0
+        self.wrongCount = 0
     }
     
-    mutating func markAsReviewed() {
+    mutating func markAsCorrect() {
+        correctCount += 1
         reviewCount += 1
         lastReviewDate = Date()
-        if reviewCount >= 3 {
+        if correctCount >= 3 {
             learned = true
         }
+    }
+    
+    mutating func markAsWrong() {
+        wrongCount += 1
+        reviewCount += 1
+        lastReviewDate = Date()
     }
 }
